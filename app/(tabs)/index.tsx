@@ -1,71 +1,188 @@
-import { Image, StyleSheet, Platform } from 'react-native';
-
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, Animated, View, Dimensions, Alert } from 'react-native';
 import { Accelerometer } from 'expo-sensors';
 
-export default function HomeScreen() {
+export default function App() {
+  const [acceleration, setAcceleration] = useState({ x: 0, y: 0 });
+  const [subscription, setSubscription] = useState(null);
+  const [boxColor, setBoxColor] = useState('blue');
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isPaused, setIsPaused] = useState(false);
+
+  // Get screen dimensions
+  const screenWidth = Dimensions.get('window').width;
+  const screenHeight = Dimensions.get('window').height;
+
+  const _unsubscribe = () => {
+    subscription && subscription.remove();
+    setSubscription(null);
+    setPosition({ x: 0, y: 0 });
+  };
+
+  const _subscribe = () => {
+    Accelerometer.setUpdateInterval(20);
+    setSubscription(Accelerometer.addListener(({ x, y }) => {
+      setAcceleration({ x, y });
+      // Update position based on acceleration
+      setPosition(prevPosition => {
+        // Calculate new position
+        const newX = prevPosition.x + (25 * x);
+        const newY = prevPosition.y - (25 * y);
+
+        if(newY >= screenHeight - 100){
+          setBoxColor('green');
+
+        }
+
+        if(newY <= 0) {
+          setBoxColor('blue');
+        }
+
+        // Constrain position within screen bounds
+        const constrainedX = Math.min(Math.max(newX, 0), screenWidth - 50);
+        const constrainedY = Math.min(Math.max(newY, 0), screenHeight - 50);
+        
+
+        return { x: constrainedX, y: constrainedY };
+      });
+    }));
+  };
+
+  useEffect(() => {
+ 
+    _subscribe();
+
+    return () => {
+      _unsubscribe();
+    };
+  }, []);
+
+  const box2Width = 50;
+  const box2Height = 50;
+
+  const box3Width = 50;
+  const box3Height = 50;
+
+  const box4Width = 50;
+  const box4Height = 50;
+
+  const box2Left = 50; // Adjust left position of red box as needed
+  const box2Right = box2Left + box2Width;
+  const box2Top = 250; // Adjust top position of red box as needed
+  const box2Bottom = box2Top + box2Height;
+
+  const box3Left = 175; // Adjust left position of red box as needed
+  const box3Right = box3Left + box3Width;
+  const box3Top = 250; // Adjust top position of red box as needed
+  const box3Bottom = box3Top + box3Height;
+
+  const box4Left = 315; // Adjust left position of red box as needed
+  const box4Right = box4Left + box4Width;
+  const box4Top = 250; // Adjust top position of red box as needed
+  const box4Bottom = box4Top + box4Height;
+
+
+  // Collision detection logic
+  const detectCollision = () => {
+    // Dimensions and positions of the boxes
+    const box1Width = 50;
+    const box1Height = 50;
+
+
+    // Positions of the boxes
+    const box1Left = position.x;
+    const box1Right = position.x + box1Width;
+    const box1Top = position.y;
+    const box1Bottom = position.y + box1Height;
+
+
+
+    // Check for intersection
+    if (
+      (box1Right >= box2Left &&
+        box1Left <= box2Right &&
+        box1Bottom >= box2Top &&
+        box1Top <= box2Bottom) ||
+      (box1Right >= box3Left &&
+        box1Left <= box3Right &&
+        box1Bottom >= box3Top &&
+        box1Top <= box3Bottom) ||
+      (box1Right >= box4Left &&
+        box1Left <= box4Right &&
+        box1Bottom >= box4Top &&
+        box1Top <= box4Bottom)
+
+    ) {
+      setIsPaused(true); // Pause updates
+      _unsubscribe();
+      setBoxColor('blue');
+      Alert.alert("YOU FAILED!!!!!!!!!!!!", "", [
+        { text: "DARN!", onPress: () => {
+          
+          setIsPaused(false) 
+          _subscribe();
+        }} // Resume updates on OK press
+      ]);
+    }
+  };
+
+  // Periodically check for collision
+  useEffect(() => {
+    if (!isPaused) {
+      detectCollision();
+    }
+
+
+
+
+  }, [position]);
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({ ios: 'cmd + d', android: 'cmd + m' })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <View style={styles.container}>
+      <Animated.View style={{
+        width: 50,
+        height: 50,
+        backgroundColor: boxColor,
+        position: 'absolute',
+        left: position.x,
+        top: position.y,
+      }} />
+
+      <Animated.View style={{
+        width: 50,
+        height: 50,
+        position: 'absolute',
+        backgroundColor: 'red',
+        left: box2Left, // Adjust as needed
+        top: box2Top, // Adjust as needed
+      }} />
+
+      <Animated.View style={{
+        width: 50,
+        height: 50,
+        position: 'absolute',
+        backgroundColor: 'red',
+        left: box3Left, // Adjust as needed
+        top: box3Top, // Adjust as needed
+      }} />
+
+      <Animated.View style={{
+        width: 50,
+        height: 50,
+        position: 'absolute',
+        backgroundColor: 'red',
+        left: box4Left, // Adjust as needed
+        top: box4Top, // Adjust as needed
+      }} />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
+  container: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+    backgroundColor: '#fff',
   },
 });
